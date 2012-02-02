@@ -66,6 +66,7 @@ public class OntologyMinimizer {
 
         AnnotatedAxiomExtractor extractor = new AnnotatedAxiomExtractor(annotationProperties);
         pairs = extractor.extract(annotatedOntology);
+        log.info("Extracted {} pairs", pairs.size());
 
         manager.getOWLDataFactory().purge();
         manager = OWLManager.createOWLOntologyManager();
@@ -76,8 +77,7 @@ public class OntologyMinimizer {
         catch (OWLOntologyCreationException e) {
             throw new OntologyMinimizationException("Unable to load original ontology", e);
         }
-
-        log.info("Extracted {} pairs", pairs.size());
+        log.info("Original ontology contains {} axioms", generatedOntology.getAxiomCount());
     }
 
     /**
@@ -90,8 +90,12 @@ public class OntologyMinimizer {
         log.debug("Reasoner initialized");
         int counter = 0;
         for (AxiomConfidencePair pair : pairs) {
+            log.debug("Progress: {}", counter);
             log.debug("Trying to remove axiom '{}' having confidence of {}", pair.getAxiom(), pair.getConfidence());
             counter++;
+            if (!generatedOntology.containsAxiom(pair.getAxiom().getAxiomWithoutAnnotations())) {
+                continue;
+            }
             try {
                 manager.removeAxiom(generatedOntology, pair.getAxiom());
                 if (!reasoner.isEntailed(pair.getAxiom())) {
@@ -128,6 +132,16 @@ public class OntologyMinimizer {
 
         String snapShotFileName =
             snapShotDir.getAbsolutePath() + File.separator + "generated_" + snapShotCounter + ".owl";
+
+        /*
+         * sure this is a race condition when other applications interfere with this one, but this solution is
+         * sufficient
+         */
+        while (new File(snapShotFileName).exists()) {
+            snapShotCounter++;
+            snapShotFileName = snapShotDir.getAbsolutePath() + File.separator + "generated_" + snapShotCounter + ".owl";
+        }
+
         log.info("Writing snapshot to '{}'", snapShotFileName);
         FileOutputStream out;
         try {
