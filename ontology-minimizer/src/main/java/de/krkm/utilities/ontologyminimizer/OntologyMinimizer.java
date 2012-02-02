@@ -25,6 +25,9 @@ public class OntologyMinimizer {
     private OWLOntology generatedOntology;
 
     private int snapShotCounter = 0;
+    private int removedAxioms = 0;
+    private int readdedAxioms = 0;
+    private int axiomsNotInGenerated = 0;
     private PriorityQueue<AxiomConfidencePair> pairs;
     private OutputStream outputStream;
 
@@ -90,25 +93,32 @@ public class OntologyMinimizer {
         log.debug("Reasoner initialized");
         int counter = 0;
         for (AxiomConfidencePair pair : pairs) {
-            log.debug("Progress: {}", counter);
+            log.debug("Progress: {} (Removed {} - Readded {} - Not In {}",
+                      new Object[]{counter, removedAxioms, readdedAxioms, axiomsNotInGenerated});
             log.debug("Trying to remove axiom '{}' having confidence of {}", pair.getAxiom(), pair.getConfidence());
             counter++;
             if (!generatedOntology.containsAxiom(pair.getAxiom().getAxiomWithoutAnnotations())) {
+                axiomsNotInGenerated++;
                 continue;
             }
             try {
                 manager.removeAxiom(generatedOntology, pair.getAxiom());
                 if (!reasoner.isEntailed(pair.getAxiom())) {
                     log.debug("Axiom '{}' is not entailed by ontology, add it again", pair.getAxiom());
+                    readdedAxioms++;
                     manager.addAxiom(generatedOntology, pair.getAxiom());
                 }
-                else if (counter % 1000 == 0) {
-                    log.info("Reached axiom {}, trying to write snapshot", counter);
-                    try {
-                        createSnapShot();
-                    }
-                    catch (OntologyMinimizationException e) {
-                        log.error("Unable to create snapshot", e);
+                else {
+                    removedAxioms++;
+                    if (counter % 1000 == 0) {
+                        log.debug("Progress: {} (Removed {} - Readded {} - Not In {})",
+                                  new Object[]{counter, removedAxioms, readdedAxioms, axiomsNotInGenerated});
+                        try {
+                            createSnapShot();
+                        }
+                        catch (OntologyMinimizationException e) {
+                            log.error("Unable to create snapshot", e);
+                        }
                     }
                 }
             }
@@ -116,7 +126,7 @@ public class OntologyMinimizer {
                 log.error("Unable to remove axiom '{}'", pair.getAxiom(), e);
             }
         }
-        log.info("Minimizaion done...");
+        log.info("Minimization done...");
     }
 
     /**
