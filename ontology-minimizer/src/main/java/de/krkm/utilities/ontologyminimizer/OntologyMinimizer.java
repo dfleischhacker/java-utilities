@@ -92,8 +92,9 @@ public class OntologyMinimizer {
         manager.addOntologyChangeListener(reasoner);
         log.debug("Reasoner initialized");
         int counter = 0;
-        for (AxiomConfidencePair pair : pairs) {
-            log.debug("Progress: {} (Removed {} - Readded {} - Not In {}",
+        while (!pairs.isEmpty()) {
+            AxiomConfidencePair pair = pairs.remove();
+            log.debug("Progress: {} (Removed {} - Readded {} - Not In {})",
                       new Object[]{counter, removedAxioms, readdedAxioms, axiomsNotInGenerated});
             log.debug("Trying to remove axiom '{}' having confidence of {}", pair.getAxiom(), pair.getConfidence());
             counter++;
