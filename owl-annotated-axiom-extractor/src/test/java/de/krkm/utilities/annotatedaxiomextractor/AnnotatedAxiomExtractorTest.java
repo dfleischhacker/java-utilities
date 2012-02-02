@@ -49,6 +49,7 @@ public class AnnotatedAxiomExtractorTest {
 
         LinkedList<Double> reference = new LinkedList<Double>();
         Collections.addAll(reference, 0.988, 0.8, 0.1);
+        Collections.reverse(reference);
         
         while (!q.isEmpty()) {
             Double ret = q.poll().getConfidence();
