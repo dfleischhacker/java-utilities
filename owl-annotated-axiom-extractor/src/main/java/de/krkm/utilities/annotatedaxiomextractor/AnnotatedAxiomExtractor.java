@@ -39,7 +39,7 @@ public class AnnotatedAxiomExtractor {
         PriorityQueue<AxiomConfidencePair> queue =
             new PriorityQueue<AxiomConfidencePair>(100, new Comparator<AxiomConfidencePair>() {
                 public int compare(AxiomConfidencePair axiomConfidencePair, AxiomConfidencePair axiomConfidencePair1) {
-                    return -1 * axiomConfidencePair.compareTo(axiomConfidencePair1);
+                    return axiomConfidencePair.compareTo(axiomConfidencePair1);
                 }
             });
 
