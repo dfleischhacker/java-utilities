@@ -8,7 +8,7 @@
     <packaging>jar</packaging>
 
     <name>owl-annotated-axiom-extractor</name>
-    <url>https://github.com/dfleischhacker/ontology-utilities</url>
+    <url>https://github.com/dfleischhacker/java-utilities</url>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

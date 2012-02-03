@@ -8,7 +8,7 @@
     <packaging>jar</packaging>
 
     <name>ontology-minimizer</name>
-    <url>https://github.com/dfleischhacker/ontology-utilities</url>
+    <url>https://github.com/dfleischhacker/java-utilities</url>
 
     <build>
         <plugins>
@@ -179,9 +179,9 @@
             <version>3.2.4</version>
         </dependency>
         <dependency>
-            <groupId>com.owldl</groupId>
-            <artifactId>pellet-all</artifactId>
-            <version>2.3.0</version>
+            <groupId>eu.trowl.reasoner</groupId>
+            <artifactId>trowl-all</artifactId>
+            <version>0.8</version>
         </dependency>
     </dependencies>
 </project>
