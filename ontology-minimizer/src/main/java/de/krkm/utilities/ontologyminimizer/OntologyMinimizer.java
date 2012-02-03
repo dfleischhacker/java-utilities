@@ -1,11 +1,11 @@
 package de.krkm.utilities.ontologyminimizer;
 
-import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
-import com.clarkparsia.pellet.owlapiv3.PelletReasonerFactory;
 import de.krkm.utilities.annotatedaxiomextractor.AnnotatedAxiomExtractor;
 import de.krkm.utilities.annotatedaxiomextractor.AxiomConfidencePair;
+import org.semanticweb.HermiT.Reasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
+import org.semanticweb.owlapi.reasoner.OWLReasoner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,8 +88,7 @@ public class OntologyMinimizer {
      */
     public void startMinimization() {
         log.info("Starting minimization...");
-        PelletReasoner reasoner = PelletReasonerFactory.getInstance().createNonBufferingReasoner(generatedOntology);
-        manager.addOntologyChangeListener(reasoner);
+        OWLReasoner reasoner = new Reasoner(generatedOntology);
         log.debug("Reasoner initialized");
         int counter = 0;
         while (!pairs.isEmpty()) {
@@ -104,6 +103,7 @@ public class OntologyMinimizer {
             }
             try {
                 manager.removeAxiom(generatedOntology, pair.getAxiom());
+                reasoner.flush();
                 if (!reasoner.isEntailed(pair.getAxiom())) {
                     log.debug("Axiom '{}' is not entailed by ontology, add it again", pair.getAxiom());
                     readdedAxioms++;
