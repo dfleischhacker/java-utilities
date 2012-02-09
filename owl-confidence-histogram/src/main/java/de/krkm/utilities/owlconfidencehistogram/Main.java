@@ -82,7 +82,7 @@ public class Main {
                         new FileWriter(outDir.getAbsolutePath() + File.separator + filterAxiomTypeName(type) + "" +
                                                ".txt"));
 
-                for (Double val : cve.getConfidenceValues()) {
+                for (Double val : cve.getConfidenceValue(type)) {
                     writer.write(String.valueOf(val));
                     writer.newLine();
                 }
