@@ -168,6 +168,13 @@ public class OntologyMinimizer {
         catch (OWLOntologyStorageException e) {
             throw new OntologyMinimizationException("Unable to save snapshot", e);
         }
+        finally {
+            try {
+                out.close();
+            } catch (IOException ignored) {
+
+            }
+        }
         snapShotCounter++;
     }
 
