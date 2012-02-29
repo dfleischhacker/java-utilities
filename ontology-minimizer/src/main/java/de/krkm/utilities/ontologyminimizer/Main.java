@@ -5,10 +5,7 @@ import org.apache.commons.cli.*;
 import org.semanticweb.owlapi.model.IRI;
 import org.semanticweb.owlapi.model.OWLOntologyStorageException;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.*;
 import java.util.ArrayList;
 
 /**
@@ -34,9 +31,15 @@ public class Main {
                                        .withDescription("directory to write snapshots to")
                                        .hasArg().withArgName("DIRECTORY").create("s"));
         options.addOption(
-            OptionBuilder.withLongOpt("confiri").withDescription("IRIs of confidence annotations").hasArgs()
-                         .withArgName("IRI").create("conf"));
+                OptionBuilder.withLongOpt("confiri").withDescription("IRIs of confidence annotations").hasArgs()
+                             .withArgName("IRI").create("conf"));
+        options.addOption(OptionBuilder.withLongOpt("log").hasArg().withDescription("file to write removed axioms to")
+                                       .withArgName("FILENAME").create("l"));
 
+        FileOutputStream removedAxiomStream = null;
+        FileInputStream annotatedStream = null;
+        FileInputStream coherentStream = null;
+        FileOutputStream outputStream = null;
         try {
             CommandLine line = parser.parse(options, args);
 
@@ -46,9 +49,9 @@ public class Main {
                 System.exit(0);
             }
 
-            FileInputStream annotatedStream = new FileInputStream(line.getOptionValue("a"));
-            FileInputStream coherentStream = new FileInputStream(line.getOptionValue("c"));
-            FileOutputStream outputStream = new FileOutputStream(line.getOptionValue("o"));
+            annotatedStream = new FileInputStream(line.getOptionValue("a"));
+            coherentStream = new FileInputStream(line.getOptionValue("c"));
+            outputStream = new FileOutputStream(line.getOptionValue("o"));
 
             String[] iriStrings = line.getOptionValues("conf");
 
@@ -56,8 +59,7 @@ public class Main {
             if (iriStrings == null) {
                 iris.add(IRI.create("http://ki.informatik.uni-mannheim.de/gold-miner/annotations#confidence"));
                 iris.add(IRI.create("http://www.dl-learner.org/enrichment.owl#confidence"));
-            }
-            else {
+            } else {
                 for (String iri : iriStrings) {
                     iris.add(IRI.create(iri));
                 }
@@ -68,8 +70,15 @@ public class Main {
                 snapShotDir = new File(line.getOptionValue("s"));
             }
 
+
             OntologyMinimizer minimizer =
-                new OntologyMinimizer(coherentStream, annotatedStream, outputStream, iris, snapShotDir);
+                    new OntologyMinimizer(coherentStream, annotatedStream, outputStream, iris, snapShotDir);
+
+            removedAxiomStream = null;
+            if (line.hasOption("l")) {
+                removedAxiomStream = new FileOutputStream(line.getOptionValue("l"));
+                minimizer.setRemovedAxiomsStream(removedAxiomStream);
+            }
             minimizer.startMinimization();
             try {
                 minimizer.saveGeneratedOntology();
@@ -92,6 +101,28 @@ public class Main {
         catch (OntologyMinimizationException e) {
             System.err.println("Unable to minimize ontology: " + e.getMessage());
             System.exit(3);
+        }
+        finally {
+            try {
+                if (removedAxiomStream != null) {
+                    removedAxiomStream.close();
+                }
+
+                if (outputStream != null) {
+                    outputStream.close();
+                }
+
+                if (annotatedStream != null) {
+                    annotatedStream.close();
+                }
+
+                if (coherentStream != null) {
+                    coherentStream.close();
+                }
+            }
+            catch (IOException ignored) {
+
+            }
         }
     }
 }

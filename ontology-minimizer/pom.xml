@@ -165,17 +165,28 @@
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-jdk14</artifactId>
+            <artifactId>slf4j-log4j12</artifactId>
             <version>1.6.4</version>
+        </dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.16</version>
         </dependency>
         <dependency>
             <groupId>de.krkm.utilities</groupId>
             <artifactId>owl-annotated-axiom-extractor</artifactId>
             <version>1.0-SNAPSHOT</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-jdk14</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>net.sourceforge.owlapi</groupId>
-            <artifactId>owlapi-all</artifactId>
+            <artifactId>owlapi</artifactId>
             <version>3.2.4</version>
         </dependency>
         <dependency>

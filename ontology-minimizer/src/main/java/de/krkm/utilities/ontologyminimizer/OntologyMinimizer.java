@@ -2,6 +2,7 @@ package de.krkm.utilities.ontologyminimizer;
 
 import de.krkm.utilities.annotatedaxiomextractor.AnnotatedAxiomExtractor;
 import de.krkm.utilities.annotatedaxiomextractor.AxiomConfidencePair;
+import org.semanticweb.HermiT.Configuration;
 import org.semanticweb.HermiT.Reasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
@@ -30,6 +31,8 @@ public class OntologyMinimizer {
     private int axiomsNotInGenerated = 0;
     private PriorityQueue<AxiomConfidencePair> pairs;
     private OutputStream outputStream;
+    
+    private BufferedWriter removedAxiomWriter;
 
 
     /**
@@ -84,11 +87,23 @@ public class OntologyMinimizer {
     }
 
     /**
+     * Set the stream to log removed axioms to
+     *
+     * @param stream stream to write removed axioms to
+     */
+    public void setRemovedAxiomsStream(OutputStream stream) {
+        this.removedAxiomWriter = new BufferedWriter(new OutputStreamWriter(stream));
+    }
+
+
+    /**
      * Starts the minimization process
      */
     public void startMinimization() {
         log.info("Starting minimization...");
-        OWLReasoner reasoner = new Reasoner(generatedOntology);
+        Configuration hermitConf = new Configuration();
+        hermitConf.ignoreUnsupportedDatatypes = true;
+        OWLReasoner reasoner = new Reasoner(hermitConf, generatedOntology);
         log.debug("Reasoner initialized");
         int counter = 0;
         while (!pairs.isEmpty()) {
@@ -111,6 +126,12 @@ public class OntologyMinimizer {
                 }
                 else {
                     removedAxioms++;
+                    try {
+                        logRemovedAxiom(pair);
+                    }
+                    catch (IOException e) {
+                        log.error("Unable to log removed axiom", e);
+                    }
                     if (counter % 1000 == 0) {
                         log.debug("Progress: {} (Removed {} - Readded {} - Not In {})",
                                   new Object[]{counter, removedAxioms, readdedAxioms, axiomsNotInGenerated});
@@ -128,6 +149,9 @@ public class OntologyMinimizer {
             }
         }
         log.info("Minimization done...");
+        log.info("** Total axioms in result: {}", generatedOntology.getAxiomCount());
+        log.info("** Axioms removed: {}", removedAxioms);
+        log.info("** Axioms re-added: {}", readdedAxioms);
     }
 
     /**
@@ -185,5 +209,19 @@ public class OntologyMinimizer {
      */
     public void saveGeneratedOntology() throws OWLOntologyStorageException {
         manager.saveOntology(generatedOntology, outputStream);
+    }
+
+    /**
+     * Writes the given axiom into the removed axiom stream if the stream is set. Otherwise this is
+     * a no-op
+     *
+     * @param axiom axiom to write to removed axiom stream
+     */
+    private void logRemovedAxiom(AxiomConfidencePair axiom) throws IOException {
+        if (removedAxiomWriter == null) {
+            return;
+        }
+        removedAxiomWriter.write(axiom.getAxiom().toString());
+        removedAxiomWriter.newLine();
     }
 }
