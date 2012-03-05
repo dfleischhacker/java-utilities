@@ -1,10 +1,10 @@
 package de.krkm.utilities.ontologyminimizer;
 
-import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
-import com.clarkparsia.pellet.owlapiv3.PelletReasonerFactory;
 import de.krkm.utilities.annotatedaxiomextractor.AnnotatedAxiomExtractor;
 import de.krkm.utilities.annotatedaxiomextractor.AxiomConfidencePair;
 import de.krkm.utilities.collectiontostring.CollectionToStringWrapper;
+import org.semanticweb.HermiT.Configuration;
+import org.semanticweb.HermiT.Reasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
@@ -103,9 +103,9 @@ public class OntologyMinimizer {
      */
     public void startMinimization() {
         log.info("Starting minimization...");
-        PelletReasoner pellet = PelletReasonerFactory.getInstance().createReasoner(generatedOntology);
-        OWLReasoner reasoner = pellet;
-        manager.addOntologyChangeListener(pellet);
+        Configuration config = new Configuration();
+        config.ignoreUnsupportedDatatypes = true;
+        OWLReasoner reasoner = new Reasoner(config, generatedOntology);
         log.debug("Reasoner initialized");
         int counter = 0;
         while (!pairs.isEmpty()) {
