@@ -49,6 +49,8 @@ public class Main {
                 System.exit(0);
             }
 
+
+
             annotatedStream = new FileInputStream(line.getOptionValue("a"));
             coherentStream = new FileInputStream(line.getOptionValue("c"));
             outputStream = new FileOutputStream(line.getOptionValue("o"));
@@ -82,8 +84,13 @@ public class Main {
             minimizer.startMinimization();
             try {
                 minimizer.saveGeneratedOntology();
+                removedAxiomStream.close();
             }
             catch (OWLOntologyStorageException e) {
+                System.err.println("Unable to save generated ontology: " + e.getMessage());
+                System.exit(4);
+            }
+            catch (IOException e) {
                 System.err.println("Unable to save generated ontology: " + e.getMessage());
                 System.exit(4);
             }

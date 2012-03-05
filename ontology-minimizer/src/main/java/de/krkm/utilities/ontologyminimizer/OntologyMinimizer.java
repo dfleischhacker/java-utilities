@@ -1,9 +1,10 @@
 package de.krkm.utilities.ontologyminimizer;
 
+import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
+import com.clarkparsia.pellet.owlapiv3.PelletReasonerFactory;
 import de.krkm.utilities.annotatedaxiomextractor.AnnotatedAxiomExtractor;
 import de.krkm.utilities.annotatedaxiomextractor.AxiomConfidencePair;
-import org.semanticweb.HermiT.Configuration;
-import org.semanticweb.HermiT.Reasoner;
+import de.krkm.utilities.collectiontostring.CollectionToStringWrapper;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.OWLReasoner;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.PriorityQueue;
 
 /**
@@ -31,7 +33,7 @@ public class OntologyMinimizer {
     private int axiomsNotInGenerated = 0;
     private PriorityQueue<AxiomConfidencePair> pairs;
     private OutputStream outputStream;
-    
+
     private BufferedWriter removedAxiomWriter;
 
 
@@ -71,6 +73,7 @@ public class OntologyMinimizer {
         }
 
         AnnotatedAxiomExtractor extractor = new AnnotatedAxiomExtractor(annotationProperties);
+        extractor.setPreserveAnnotations(true);
         pairs = extractor.extract(annotatedOntology);
         log.info("Extracted {} pairs", pairs.size());
 
@@ -95,15 +98,14 @@ public class OntologyMinimizer {
         this.removedAxiomWriter = new BufferedWriter(new OutputStreamWriter(stream));
     }
 
-
     /**
      * Starts the minimization process
      */
     public void startMinimization() {
         log.info("Starting minimization...");
-        Configuration hermitConf = new Configuration();
-        hermitConf.ignoreUnsupportedDatatypes = true;
-        OWLReasoner reasoner = new Reasoner(hermitConf, generatedOntology);
+        PelletReasoner pellet = PelletReasonerFactory.getInstance().createReasoner(generatedOntology);
+        OWLReasoner reasoner = pellet;
+        manager.addOntologyChangeListener(pellet);
         log.debug("Reasoner initialized");
         int counter = 0;
         while (!pairs.isEmpty()) {
@@ -112,19 +114,21 @@ public class OntologyMinimizer {
                       new Object[]{counter, removedAxioms, readdedAxioms, axiomsNotInGenerated});
             log.debug("Trying to remove axiom '{}' having confidence of {}", pair.getAxiom(), pair.getConfidence());
             counter++;
-            if (!generatedOntology.containsAxiom(pair.getAxiom().getAxiomWithoutAnnotations())) {
+            if (!generatedOntology.containsAxiomIgnoreAnnotations(pair.getAxiom())) {
                 axiomsNotInGenerated++;
                 continue;
             }
             try {
-                manager.removeAxiom(generatedOntology, pair.getAxiom());
+                List<OWLOntologyChange> changes = manager.removeAxiom(generatedOntology, pair.getAxiom());
+                log.debug("Changes that took place: {}", new CollectionToStringWrapper(changes));
                 reasoner.flush();
-                if (!reasoner.isEntailed(pair.getAxiom())) {
+                if (!reasoner.isEntailed(pair.getAxiom().getAxiomWithoutAnnotations())) {
                     log.debug("Axiom '{}' is not entailed by ontology, add it again", pair.getAxiom());
                     readdedAxioms++;
                     manager.addAxiom(generatedOntology, pair.getAxiom());
                 }
                 else {
+                    log.debug("Axiom '{}' is still entailed", pair.getAxiom());
                     removedAxioms++;
                     try {
                         logRemovedAxiom(pair);
@@ -223,5 +227,6 @@ public class OntologyMinimizer {
         }
         removedAxiomWriter.write(axiom.getAxiom().toString());
         removedAxiomWriter.newLine();
+        removedAxiomWriter.flush();
     }
 }
