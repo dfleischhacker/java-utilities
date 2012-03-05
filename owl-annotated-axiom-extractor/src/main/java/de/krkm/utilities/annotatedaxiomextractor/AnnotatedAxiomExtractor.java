@@ -18,6 +18,8 @@ public class AnnotatedAxiomExtractor {
 
     private ArrayList<OWLAnnotationProperty> annotationIRIs;
 
+    private boolean preserve = false;
+
     /**
      * Initializes an extractor using the given IRIs to extract a confidence value from. The IRIs are checked in the
      * order they are given in the array. The first annotation with an IRI contained in <code>annotationIRIs</code>.
@@ -27,6 +29,15 @@ public class AnnotatedAxiomExtractor {
     public AnnotatedAxiomExtractor(ArrayList<OWLAnnotationProperty> annotationIRIs) {
         log.info("Initializing the extractor with IRIs '{}'", new CollectionToStringWrapper(annotationIRIs));
         this.annotationIRIs = annotationIRIs;
+    }
+
+    /**
+     * Sets of axioms should be added with or without annotations
+     *
+     * @param preserve if true, annotations are not removed before adding axioms into the queue
+     */
+    public void setPreserveAnnotations(boolean preserve) {
+        this.preserve = preserve;
     }
 
     /**
@@ -52,7 +63,7 @@ public class AnnotatedAxiomExtractor {
                     OWLAnnotation annotation = annotations.iterator().next();
                     Double confidence = Double.parseDouble(annotation.getValue().toString().split("\"")[1]);
 
-                    queue.add(new AxiomConfidencePair(ax.getAxiomWithoutAnnotations(), confidence));
+                    queue.add(new AxiomConfidencePair(preserve ? ax : ax.getAxiomWithoutAnnotations(), confidence));
                     log.debug("Added axiom '{}'", ax.getAxiomWithoutAnnotations());
                     break;
                 }
