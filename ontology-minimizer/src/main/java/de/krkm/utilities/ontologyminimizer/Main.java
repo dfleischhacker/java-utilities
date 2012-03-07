@@ -2,18 +2,18 @@ package de.krkm.utilities.ontologyminimizer;
 
 
 import org.apache.commons.cli.*;
-import org.semanticweb.owlapi.model.IRI;
-import org.semanticweb.owlapi.model.OWLOntologyStorageException;
+import org.semanticweb.owlapi.apibinding.OWLManager;
+import org.semanticweb.owlapi.model.OWLOntology;
+import org.semanticweb.owlapi.model.OWLOntologyManager;
 
 import java.io.*;
-import java.util.ArrayList;
 
 /**
  * Implements entry point for command-line interface of the ontology minimizer application
  */
 public class Main {
     @SuppressWarnings("AccessStaticViaInstance")
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         CommandLineParser parser = new PosixParser();
 
         Options options = new Options();
@@ -49,65 +49,53 @@ public class Main {
                 System.exit(0);
             }
 
-
-
             annotatedStream = new FileInputStream(line.getOptionValue("a"));
             coherentStream = new FileInputStream(line.getOptionValue("c"));
             outputStream = new FileOutputStream(line.getOptionValue("o"));
 
             String[] iriStrings = line.getOptionValues("conf");
 
-            ArrayList<IRI> iris = new ArrayList<IRI>();
             if (iriStrings == null) {
-                iris.add(IRI.create("http://ki.informatik.uni-mannheim.de/gold-miner/annotations#confidence"));
-                iris.add(IRI.create("http://www.dl-learner.org/enrichment.owl#confidence"));
-            } else {
-                for (String iri : iriStrings) {
-                    iris.add(IRI.create(iri));
-                }
+                iriStrings = new String[2];
+                iriStrings[0] = "http://ki.informatik.uni-mannheim.de/gold-miner/annotations#confidence";
+                iriStrings[1] = "http://www.dl-learner.org/enrichment.owl#confidence";
             }
 
-            File snapShotDir = null;
+            OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+            OWLOntology annotatedOntology = manager.loadOntologyFromOntologyDocument(annotatedStream);
+            OntologyMinimizer minimizer = new OntologyMinimizer(annotatedOntology, iriStrings);
+
+            manager.removeOntology(annotatedOntology);
+            manager.getOWLDataFactory().purge();
+
+            OWLOntology coherentOntology = manager.loadOntologyFromOntologyDocument(coherentStream);
             if (line.hasOption("s")) {
-                snapShotDir = new File(line.getOptionValue("s"));
+                minimizer.setSnapShotDir(new File(line.getOptionValue("s")));
             }
-
-
-            OntologyMinimizer minimizer =
-                    new OntologyMinimizer(coherentStream, annotatedStream, outputStream, iris, snapShotDir);
 
             removedAxiomStream = null;
             if (line.hasOption("l")) {
                 removedAxiomStream = new FileOutputStream(line.getOptionValue("l"));
-                minimizer.setRemovedAxiomsStream(removedAxiomStream);
             }
-            minimizer.startMinimization();
+            OWLOntology minimizedOntology = minimizer.startMinimization(coherentOntology, removedAxiomStream);
             try {
-                minimizer.saveGeneratedOntology();
+                manager.saveOntology(minimizedOntology, outputStream);
                 removedAxiomStream.close();
             }
-            catch (OWLOntologyStorageException e) {
+            catch (Exception e) {
                 System.err.println("Unable to save generated ontology: " + e.getMessage());
-                System.exit(4);
-            }
-            catch (IOException e) {
-                System.err.println("Unable to save generated ontology: " + e.getMessage());
-                System.exit(4);
+                throw e;
             }
         }
         catch (ParseException e) {
             System.err.println("Error parsing arguments: " + e.getMessage());
             HelpFormatter formatter = new HelpFormatter();
             formatter.printHelp("java -jar " + Main.class.getCanonicalName(), options);
-            System.exit(2);
+            return;
         }
         catch (FileNotFoundException e) {
             System.err.println("Error opening file: " + e.getMessage());
-            System.exit(2);
-        }
-        catch (OntologyMinimizationException e) {
-            System.err.println("Unable to minimize ontology: " + e.getMessage());
-            System.exit(3);
+            throw e;
         }
         finally {
             try {
