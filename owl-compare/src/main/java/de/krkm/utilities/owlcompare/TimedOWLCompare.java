@@ -5,6 +5,7 @@ import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import de.krkm.patterndebug.reasoner.Reasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
+import org.semanticweb.owlapi.io.RDFXMLOntologyFormat;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.BufferingMode;
 import org.semanticweb.owlapi.reasoner.InferenceType;
@@ -19,28 +20,56 @@ public class TimedOWLCompare {
             AxiomType.DISJOINT_OBJECT_PROPERTIES, AxiomType.SUB_OBJECT_PROPERTY, AxiomType.OBJECT_PROPERTY_DOMAIN,
             AxiomType.OBJECT_PROPERTY_RANGE};
 
-    public TimedOWLCompare(String ontologyFileName, String inPatternFile, String inPelletFile)
+    public TimedOWLCompare(File ontologyDirectory, File resultDirectory)
             throws IOException, OWLOntologyCreationException, OWLOntologyStorageException, InvalidArgumentException {
 
+        if (!resultDirectory.exists()) {
+            resultDirectory.mkdirs();
+        }
 
-        OWLOntologyManager manager1 = OWLManager.createOWLOntologyManager();
-        OWLOntologyManager manager2 = OWLManager.createOWLOntologyManager();
-        OWLOntology baseOntology = manager1.loadOntologyFromOntologyDocument(new FileInputStream(ontologyFileName));
-        OWLOntology compareOntology = manager2
+        BufferedWriter writer = new BufferedWriter(new FileWriter(resultDirectory + File.separator + "timing.txt"));
+
+
+        File[] files = ontologyDirectory.listFiles();
+
+        if (files == null) {
+            throw new RuntimeException("No ontologies found");
+        }
+        for (File ontologyFile : files) {
+            if (!ontologyFile.getName().endsWith("owl")) {
+                continue;
+            }
+            String inPatternFile = resultDirectory.getAbsolutePath() + File.separator + ontologyFile
+                    .getName() + "_inpattern";
+            String inPelletFile = resultDirectory.getAbsolutePath() + File.separator + ontologyFile
+                    .getName() + "_inpellet";
+            long[] times = runTiming(ontologyFile.getAbsolutePath(), inPatternFile, inPelletFile);
+            writer.write(String.format("%s: pellet %d, pattern %d", ontologyFile, times[1], times[0]));
+
+        }
+        writer.close();
+    }
+
+    public long[] runTiming(String ontologyFileName, String inPatternFile, String inPelletFile)
+            throws OWLOntologyCreationException, OWLOntologyStorageException, IOException {
+        OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+        OWLOntology compareOntology = manager
                 .loadOntologyFromOntologyDocument(new FileInputStream(ontologyFileName));
-        OWLOntology cleanedOntology = manager2.createOntology();
+        OWLOntology cleanedOntology = getCleanedOntology(compareOntology);
+
         Set<AxiomType> typeSet = new HashSet<AxiomType>();
         Collections.addAll(typeSet, TYPES);
 
         for (OWLAxiom ax : compareOntology.getAxioms()) {
             if (typeSet.contains(ax.getAxiomType()) && ax.getSignature().size() > 1 && isAtomic(ax)) {
-                manager2.addAxiom(cleanedOntology, ax);
+                manager.addAxiom(cleanedOntology, ax);
             }
         }
+
         File cleanedFile = new File(ontologyFileName + "_cleaned");
         System.out.println(cleanedFile.getAbsolutePath());
         FileOutputStream cleanedStream = new FileOutputStream(cleanedFile);
-        manager2.saveOntology(cleanedOntology, cleanedStream);
+        manager.saveOntology(cleanedOntology, new RDFXMLOntologyFormat(), cleanedStream);
         cleanedStream.close();
 
         FileWriter inPatternWriter = new FileWriter(inPatternFile);
@@ -56,7 +85,6 @@ public class TimedOWLCompare {
                 InferenceType.DISJOINT_CLASSES);
         long pelletRuntime = System.currentTimeMillis() - pelletStart;
 
-        System.out.println("Axioms contained in baseOntology but not in compared ontology");
         patternStart = System.currentTimeMillis();
         Set<OWLAxiom> patternReasonerAxioms = patternReasoner.getAxioms();
         System.out.println("Pattern Reasoner inferred: " + patternReasonerAxioms.size());
@@ -73,9 +101,6 @@ public class TimedOWLCompare {
         }
         inPatternWriter.close();
 
-        System.out.println(
-                "=======================================================\nAxioms contained in compared ontology but " +
-                        "not baseOntology");
         PelletExplanation.setup();
         PelletExplanation expl = new PelletExplanation(cleanedOntology);
         for (AxiomType t : TYPES) {
@@ -97,6 +122,7 @@ public class TimedOWLCompare {
                         }
                     }
                     catch (OWLRuntimeException e) {
+//                        System.out.println("Unable to get explanation");
                         e.printStackTrace();
                     }
                     inPelletWriter.write("\n");
@@ -108,19 +134,26 @@ public class TimedOWLCompare {
         System.out.println("Runtime Pattern: " + patternRuntime);
         System.out.println("Runtime Pellet: " + pelletRuntime);
 
-        OWLDataFactory dataFactory = manager2.getOWLDataFactory();
-        OWLAxiom ax = dataFactory
-                .getOWLDisjointClassesAxiom(dataFactory.getOWLClass(
-                        IRI.create("http://dbpedia.org/ontology/BadmintonPlayer")),
-                        dataFactory.getOWLClass(
-                                IRI.create("http://dbpedia.org/ontology/SpeedwayLeague")
-                        ));
-        System.out.println(reasoner.isEntailed(ax));
+        return new long[]{patternRuntime, pelletRuntime};
+    }
+
+    public static OWLOntology getCleanedOntology(OWLOntology base) throws OWLOntologyCreationException {
+        OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+        OWLOntology cleanedOntology = manager.createOntology();
+        Set<AxiomType> typeSet = new HashSet<AxiomType>();
+        Collections.addAll(typeSet, TYPES);
+
+        for (OWLAxiom ax : base.getAxioms()) {
+            if (typeSet.contains(ax.getAxiomType()) && ax.getSignature().size() > 1 && isAtomic(ax)) {
+                manager.addAxiom(cleanedOntology, ax);
+            }
+        }
+        return cleanedOntology;
     }
 
     public static void main(String[] args)
             throws OWLOntologyCreationException, IOException, OWLOntologyStorageException, InvalidArgumentException {
-        new TimedOWLCompare(args[0], args[1], args[2]);
+        TimedOWLCompare compare = new TimedOWLCompare(new File(args[0]), new File(args[1]));
     }
 
     public <T extends OWLAxiom> Set<T> getAllAxioms(PelletReasoner reasoner, AxiomType<T> type) {
@@ -214,7 +247,7 @@ public class TimedOWLCompare {
      * @param axiom
      * @return
      */
-    public boolean isAtomic(OWLAxiom axiom) throws InvalidArgumentException {
+    public static boolean isAtomic(OWLAxiom axiom) {
         if (axiom instanceof OWLSubClassOfAxiom) {
             OWLSubClassOfAxiom casted = (OWLSubClassOfAxiom) axiom;
             return !casted.getSubClass().isAnonymous() && !casted.getSuperClass().isAnonymous();
@@ -267,6 +300,6 @@ public class TimedOWLCompare {
             return !casted.getClass().isAnonymousClass();
         }
 
-        throw new InvalidArgumentException(new String[]{axiom.getAxiomType().toString() + " not supported"});
+        throw new RuntimeException(axiom.getAxiomType().toString() + " not supported");
     }
 }
