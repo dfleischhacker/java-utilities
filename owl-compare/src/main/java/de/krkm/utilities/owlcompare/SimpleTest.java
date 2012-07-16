@@ -2,7 +2,7 @@ package de.krkm.utilities.owlcompare;
 
 import com.clarkparsia.owlapi.explanation.PelletExplanation;
 import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
-import de.krkm.patterndebug.reasoner.Reasoner;
+import de.krkm.trex.reasoner.Reasoner;
 import de.krkm.utilities.collectiontostring.CollectionToStringWrapper;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;

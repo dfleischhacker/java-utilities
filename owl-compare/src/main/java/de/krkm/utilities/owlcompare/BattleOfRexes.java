@@ -1,59 +1,31 @@
 package de.krkm.utilities.owlcompare;
 
-import com.clarkparsia.owlapi.explanation.PelletExplanation;
 import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import de.krkm.trex.reasoner.Reasoner;
+import de.krkm.utilities.collectiontostring.CollectionToStringWrapper;
+import de.unima.ki.debug.srex.SREXReasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.RDFXMLOntologyFormat;
 import org.semanticweb.owlapi.model.*;
-import org.semanticweb.owlapi.reasoner.BufferingMode;
-import org.semanticweb.owlapi.reasoner.InferenceType;
 
 import java.io.*;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-public class TimedOWLCompare {
+public class BattleOfRexes {
     public final static AxiomType[] TYPES = new AxiomType[]{AxiomType.SUBCLASS_OF, AxiomType.DISJOINT_CLASSES,
             AxiomType.DISJOINT_OBJECT_PROPERTIES, AxiomType.SUB_OBJECT_PROPERTY, AxiomType.OBJECT_PROPERTY_DOMAIN,
             AxiomType.OBJECT_PROPERTY_RANGE};
 
-    public TimedOWLCompare(File ontologyDirectory, File resultDirectory)
+    public BattleOfRexes()
             throws IOException, OWLOntologyCreationException, OWLOntologyStorageException, InvalidArgumentException {
 
-        if (!resultDirectory.exists()) {
-            resultDirectory.mkdirs();
-        }
-
-        BufferedWriter writer = new BufferedWriter(new FileWriter(resultDirectory + File.separator + "timing.txt"));
-
-
-        File[] files = ontologyDirectory.listFiles();
-
-        if (files == null) {
-            throw new RuntimeException("No ontologies found");
-        }
-        for (File ontologyFile : files) {
-            if (!ontologyFile.getAbsolutePath().contains("0.02")) {
-                continue;
-            }
-            if (!ontologyFile.getName().endsWith("owl")) {
-                continue;
-            }
-            String inPatternFile = resultDirectory.getAbsolutePath() + File.separator + ontologyFile
-                    .getName() + "_inpattern";
-            String inPelletFile = resultDirectory.getAbsolutePath() + File.separator + ontologyFile
-                    .getName() + "_inpellet";
-            long[] times = runTiming(ontologyFile.getAbsolutePath(), inPatternFile, inPelletFile);
-            writer.write(String.format("%s: pellet %d, pattern %d", ontologyFile, times[1], times[0]));
-
-        }
-        writer.close();
+            runTiming("/home/daniel/temp/ontologies/uma-random-0.05-arctan.owl");
     }
 
-    public long[] runTiming(String ontologyFileName, String inPatternFile, String inPelletFile)
+    public void runTiming(String ontologyFileName)
             throws OWLOntologyCreationException, OWLOntologyStorageException, IOException {
         OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
         OWLOntology compareOntology = manager
@@ -66,69 +38,32 @@ public class TimedOWLCompare {
         manager.saveOntology(cleanedOntology, new RDFXMLOntologyFormat(), cleanedStream);
         cleanedStream.close();
 
-        FileWriter inPatternWriter = new FileWriter(inPatternFile);
-        FileWriter inPelletWriter = new FileWriter(inPelletFile);
+        SREXReasoner srex = new SREXReasoner();
+        srex.loadOntology("/home/daniel/temp/ontologies/uma-random-0.05-arctan.owl_cleaned");
 
-        long patternStart = System.currentTimeMillis();
-        Reasoner patternReasoner = new Reasoner(cleanedOntology);
-        long patternRuntime = System.currentTimeMillis() - patternStart;
+        srex.init();
+        srex.materialize();
 
-        long pelletStart = System.currentTimeMillis();
-        PelletReasoner reasoner = new PelletReasoner(cleanedOntology, BufferingMode.BUFFERING);
-        reasoner.precomputeInferences(InferenceType.CLASS_HIERARCHY, InferenceType.OBJECT_PROPERTY_HIERARCHY,
-                InferenceType.DISJOINT_CLASSES);
-        long pelletRuntime = System.currentTimeMillis() - pelletStart;
+        Set<Set<OWLAxiom>> conflictsSREX = new HashSet<Set<OWLAxiom>>(srex.getConflictSets());
 
-        patternStart = System.currentTimeMillis();
-        Set<OWLAxiom> patternReasonerAxioms = patternReasoner.getAxioms();
-        System.out.println("Pattern Reasoner inferred: " + patternReasonerAxioms.size());
-        patternRuntime += (System.currentTimeMillis() - patternStart);
-        for (OWLAxiom ax : patternReasonerAxioms) {
-            pelletStart = System.currentTimeMillis();
-            boolean isEntailed = reasoner.isEntailed(ax);
-            pelletRuntime += System.currentTimeMillis() - pelletStart;
-            if (!isEntailed) {
-                inPatternWriter.write(ax.toString());
-                inPatternWriter.write(patternReasoner.getExplanation(ax).toString());
-                inPatternWriter.write("\n");
+        Set<Set<OWLAxiom>> conflictsTREX = new HashSet<Set<OWLAxiom>>();
+
+        Reasoner trex = new Reasoner(cleanedOntology);
+        for (int i = 0; i < trex.getConceptDisjointness().getDimensionCol(); i++) {
+            if (trex.getConceptDisjointness().get(i, i)) {
+                conflictsTREX.addAll(trex.getConceptDisjointness().getExplanation(i, i).getDisjunction());
             }
         }
-        inPatternWriter.close();
 
-        PelletExplanation.setup();
-        PelletExplanation expl = new PelletExplanation(cleanedOntology);
-        for (AxiomType t : TYPES) {
-            pelletStart = System.currentTimeMillis();
-            //noinspection unchecked
-            Set<OWLAxiom> pelletAxioms = (Set<OWLAxiom>) getAllAxioms(reasoner, t);
-            pelletRuntime += System.currentTimeMillis() - pelletStart;
-            for (OWLAxiom a : pelletAxioms) {
-                patternStart = System.currentTimeMillis();
-                boolean isEntailed = patternReasoner.isEntailed(a);
-                patternRuntime += System.currentTimeMillis() - patternStart;
-                if (!isEntailed) {
-                    inPelletWriter.write(a.toString() + " -- ");
-                    try {
-                        for (Set<OWLAxiom> e : expl.getEntailmentExplanations(a)) {
-                            for (OWLAxiom e2 : e) {
-                                inPelletWriter.write(e2.toString() + ", ");
-                            }
-                        }
-                    }
-                    catch (OWLRuntimeException e) {
-//                        System.out.println("Unable to get explanation");
-                        e.printStackTrace();
-                    }
-                    inPelletWriter.write("\n");
-                }
-            }
+        for (Set<OWLAxiom> c : conflictsSREX) {
+            System.out.println("SREX: " + new CollectionToStringWrapper(c));
+            System.out.println("In TREX? " + conflictsTREX.contains(c));
         }
-        inPelletWriter.close();
 
-        System.out.println("Runtime Pattern: " + patternRuntime);
-        System.out.println("Runtime Pellet: " + pelletRuntime);
-
-        return new long[]{patternRuntime, pelletRuntime};
+        for (Set<OWLAxiom> c : conflictsTREX) {
+            System.out.println("TREX: " + new CollectionToStringWrapper(c));
+            System.out.println("In SREX? " + conflictsSREX.contains(c));
+        }
     }
 
     public static OWLOntology getCleanedOntology(OWLOntology base) throws OWLOntologyCreationException {
@@ -147,7 +82,7 @@ public class TimedOWLCompare {
 
     public static void main(String[] args)
             throws OWLOntologyCreationException, IOException, OWLOntologyStorageException, InvalidArgumentException {
-        TimedOWLCompare compare = new TimedOWLCompare(new File(args[0]), new File(args[1]));
+        BattleOfRexes compare = new BattleOfRexes();
     }
 
     public <T extends OWLAxiom> Set<T> getAllAxioms(PelletReasoner reasoner, AxiomType<T> type) {

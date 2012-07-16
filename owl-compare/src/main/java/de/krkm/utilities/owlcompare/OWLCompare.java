@@ -2,7 +2,7 @@ package de.krkm.utilities.owlcompare;
 
 import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.sun.javaws.exceptions.InvalidArgumentException;
-import de.krkm.patterndebug.reasoner.Reasoner;
+import de.krkm.trex.reasoner.Reasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.BufferingMode;
