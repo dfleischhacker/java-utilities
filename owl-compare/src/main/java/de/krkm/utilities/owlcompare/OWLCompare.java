@@ -2,7 +2,7 @@ package de.krkm.utilities.owlcompare;
 
 import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.sun.javaws.exceptions.InvalidArgumentException;
-import de.krkm.trex.reasoner.Reasoner;
+import de.krkm.trex.reasoner.TRexReasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.reasoner.BufferingMode;
@@ -44,7 +44,7 @@ public class OWLCompare {
         manager2.saveOntology(cleanedOntology, cleanedStream);
 
 
-        Reasoner patternReasoner = new Reasoner(baseOntology);
+        TRexReasoner patternReasoner = new TRexReasoner(baseOntology);
 
 
         PelletReasoner reasoner = new PelletReasoner(cleanedOntology, BufferingMode.BUFFERING);

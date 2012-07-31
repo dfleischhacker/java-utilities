@@ -2,7 +2,7 @@ package de.krkm.utilities.owlcompare;
 
 import com.clarkparsia.owlapi.explanation.PelletExplanation;
 import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
-import de.krkm.trex.reasoner.Reasoner;
+import de.krkm.trex.reasoner.TRexReasoner;
 import de.krkm.utilities.collectiontostring.CollectionToStringWrapper;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.model.*;
@@ -17,7 +17,7 @@ public class SimpleTest {
         OWLOntologyManager manager1 = OWLManager.createOWLOntologyManager();
         OWLOntology baseOntology = manager1.loadOntologyFromOntologyDocument(
                 new FileInputStream("/home/daniel/temp/ontologies/uma-random-0.05-arctan.owl_cleaned"));
-        Reasoner reasoner = new Reasoner(baseOntology);
+        TRexReasoner reasoner = new TRexReasoner(baseOntology);
         OWLDataFactory dataFactory = manager1.getOWLDataFactory();
         OWLAxiom ax = checkSubClass(dataFactory, reasoner, "http://dbpedia.org/ontology/FloweringPlant",
                 "http://dbpedia.org/ontology/Species");
@@ -46,7 +46,7 @@ public class SimpleTest {
         }
     }
 
-    public static OWLAxiom checkSubClass(OWLDataFactory dataFactory, Reasoner reasoner, String iri1, String iri2) {
+    public static OWLAxiom checkSubClass(OWLDataFactory dataFactory, TRexReasoner reasoner, String iri1, String iri2) {
         OWLAxiom ax = dataFactory
                 .getOWLSubClassOfAxiom(dataFactory.getOWLClass(
                         IRI.create(iri1)),

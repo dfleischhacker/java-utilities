@@ -3,7 +3,7 @@ package de.krkm.utilities.owlcompare;
 import com.clarkparsia.owlapi.explanation.PelletExplanation;
 import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.sun.javaws.exceptions.InvalidArgumentException;
-import de.krkm.trex.reasoner.Reasoner;
+import de.krkm.trex.reasoner.TRexReasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.RDFXMLOntologyFormat;
 import org.semanticweb.owlapi.model.*;
@@ -70,7 +70,7 @@ public class TimedOWLCompare {
         FileWriter inPelletWriter = new FileWriter(inPelletFile);
 
         long patternStart = System.currentTimeMillis();
-        Reasoner patternReasoner = new Reasoner(cleanedOntology);
+        TRexReasoner patternReasoner = new TRexReasoner(cleanedOntology);
         long patternRuntime = System.currentTimeMillis() - patternStart;
 
         long pelletStart = System.currentTimeMillis();

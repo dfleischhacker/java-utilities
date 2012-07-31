@@ -2,14 +2,17 @@ package de.krkm.utilities.owlcompare;
 
 import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.sun.javaws.exceptions.InvalidArgumentException;
-import de.krkm.trex.reasoner.Reasoner;
+import de.krkm.trex.reasoner.TRexReasoner;
 import de.krkm.utilities.collectiontostring.CollectionToStringWrapper;
 import de.unima.ki.debug.srex.SREXReasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.RDFXMLOntologyFormat;
 import org.semanticweb.owlapi.model.*;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -20,9 +23,12 @@ public class BattleOfRexes {
             AxiomType.OBJECT_PROPERTY_RANGE};
 
     public BattleOfRexes()
-            throws IOException, OWLOntologyCreationException, OWLOntologyStorageException, InvalidArgumentException {
-
-            runTiming("/home/daniel/temp/ontologies/uma-random-0.05-arctan.owl");
+            throws IOException, OWLOntologyCreationException, OWLOntologyStorageException, InvalidArgumentException,
+            InterruptedException {
+        System.out.println("Waiting for 10 secs to allow configuration of VisualVM");
+        Thread.sleep(20000);
+        System.out.println("Done waiting");
+        runTiming("/home/daniel/temp/ontologies/uma-random-0.05-arctan.owl");
     }
 
     public void runTiming(String ontologyFileName)
@@ -48,21 +54,25 @@ public class BattleOfRexes {
 
         Set<Set<OWLAxiom>> conflictsTREX = new HashSet<Set<OWLAxiom>>();
 
-        Reasoner trex = new Reasoner(cleanedOntology);
+        TRexReasoner trex = new TRexReasoner(cleanedOntology);
         for (int i = 0; i < trex.getConceptDisjointness().getDimensionCol(); i++) {
             if (trex.getConceptDisjointness().get(i, i)) {
                 conflictsTREX.addAll(trex.getConceptDisjointness().getExplanation(i, i).getDisjunction());
             }
         }
 
+        System.out.println("Conflicts not in TRex but in SRex");
         for (Set<OWLAxiom> c : conflictsSREX) {
-            System.out.println("SREX: " + new CollectionToStringWrapper(c));
-            System.out.println("In TREX? " + conflictsTREX.contains(c));
+            if (!conflictsTREX.contains(c)) {
+                System.out.println(new CollectionToStringWrapper(c));
+            }
         }
 
+        System.out.println("Conflicts not in SRex but in TRex");
         for (Set<OWLAxiom> c : conflictsTREX) {
-            System.out.println("TREX: " + new CollectionToStringWrapper(c));
-            System.out.println("In SREX? " + conflictsSREX.contains(c));
+            if (!conflictsSREX.contains(c)) {
+                System.out.println(new CollectionToStringWrapper(c));
+            }
         }
     }
 
@@ -81,7 +91,8 @@ public class BattleOfRexes {
     }
 
     public static void main(String[] args)
-            throws OWLOntologyCreationException, IOException, OWLOntologyStorageException, InvalidArgumentException {
+            throws OWLOntologyCreationException, IOException, OWLOntologyStorageException, InvalidArgumentException,
+            InterruptedException {
         BattleOfRexes compare = new BattleOfRexes();
     }
 

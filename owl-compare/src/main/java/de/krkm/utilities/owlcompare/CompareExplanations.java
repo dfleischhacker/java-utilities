@@ -3,7 +3,7 @@ package de.krkm.utilities.owlcompare;
 import com.clarkparsia.owlapi.explanation.PelletExplanation;
 import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import de.krkm.trex.booleanexpressions.OrExpression;
-import de.krkm.trex.reasoner.Reasoner;
+import de.krkm.trex.reasoner.TRexReasoner;
 import de.krkm.utilities.collectiontostring.CollectionToStringWrapper;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
@@ -49,7 +49,7 @@ public class CompareExplanations {
                 .getCleanedOntology(ontology);
         OWLDataFactory df = manager.getOWLDataFactory();
         PelletExplanation.setup();
-        Reasoner pattern = new Reasoner(cleanedOntology);
+        TRexReasoner pattern = new TRexReasoner(cleanedOntology);
         PelletReasoner full = new PelletReasoner(ontology, BufferingMode.BUFFERING);
         PelletExplanation fullExpl = new PelletExplanation(full);
         Node<OWLClass> fullUnsat = full.getUnsatisfiableClasses();
