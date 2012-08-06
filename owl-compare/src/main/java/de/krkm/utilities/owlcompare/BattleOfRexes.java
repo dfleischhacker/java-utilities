@@ -55,8 +55,8 @@ public class BattleOfRexes {
         Set<Set<OWLAxiom>> conflictsTREX = new HashSet<Set<OWLAxiom>>();
 
         TRexReasoner trex = new TRexReasoner(cleanedOntology);
-        for (int i = 0; i < trex.getConceptDisjointness().getDimensionCol(); i++) {
-            if (trex.getConceptDisjointness().get(i, i)) {
+        for (int i = 0; i < trex.getConceptDisjointness().dimensionCol; i++) {
+            if (trex.conceptDisjointness.get(i, i)) {
                 conflictsTREX.addAll(trex.getConceptDisjointness().getExplanation(i, i).getDisjunction());
             }
         }
