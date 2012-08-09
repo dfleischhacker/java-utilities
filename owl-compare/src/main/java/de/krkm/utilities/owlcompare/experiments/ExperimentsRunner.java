@@ -92,6 +92,7 @@ public class ExperimentsRunner {
         sb.append("UnsatProperties: Total reasoning time: ").append(toSeconds(System.nanoTime() - startTime)).append("\n");
         sb.append("UnsatProperties: Got all incoherent properties at ").append(System.nanoTime()).append("\n");
         sb.append("UnsatProperties: Number of incoherent properties is ").append(trexIncoherentClasses.size()).append("\n");
+        sb.append("UnsatProperties: ").append(trexIncoherentClasses.size()).append("\n");
 
         sb.append("\n");
         resStream.write(sb.toString().getBytes(Charset.defaultCharset()));

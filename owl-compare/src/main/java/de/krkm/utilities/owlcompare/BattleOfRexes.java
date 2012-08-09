@@ -3,7 +3,6 @@ package de.krkm.utilities.owlcompare;
 import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.sun.javaws.exceptions.InvalidArgumentException;
 import de.krkm.trex.reasoner.TRexReasoner;
-import de.krkm.utilities.collectiontostring.CollectionToStringWrapper;
 import de.unima.ki.debug.srex.SREXReasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.RDFXMLOntologyFormat;
@@ -32,7 +31,8 @@ public class BattleOfRexes {
     }
 
     public void runTiming(String ontologyFileName)
-            throws OWLOntologyCreationException, OWLOntologyStorageException, IOException {
+            throws IOException, OWLOntologyStorageException,
+            OWLOntologyCreationException {
         OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
         OWLOntology compareOntology = manager
                 .loadOntologyFromOntologyDocument(new FileInputStream(ontologyFileName));
@@ -52,16 +52,19 @@ public class BattleOfRexes {
 
         Set<Set<OWLAxiom>> conflictsSREX = new HashSet<Set<OWLAxiom>>(srex.getConflictSets());
 
-        Set<Set<OWLAxiom>> conflictsTREX = new HashSet<Set<OWLAxiom>>();
+//        Set<OWLObjectProperty> conflictsTREX = new HashSet<Set<OWLAxiom>>();
 
         TRexReasoner trex = new TRexReasoner(cleanedOntology);
-        for (int i = 0; i < trex.getConceptDisjointness().dimensionCol; i++) {
+        /*for (int i = 0; i < trex.getConceptDisjointness().dimensionCol; i++) {
             if (trex.conceptDisjointness.get(i, i)) {
                 conflictsTREX.addAll(trex.getConceptDisjointness().getExplanation(i, i).getDisjunction());
             }
-        }
+        }*/
 
+        /*conflictsTREX = trex.getIncoherentProperties();
         System.out.println("Conflicts not in TRex but in SRex");
+
+
         for (Set<OWLAxiom> c : conflictsSREX) {
             if (!conflictsTREX.contains(c)) {
                 System.out.println(new CollectionToStringWrapper(c));
@@ -73,7 +76,7 @@ public class BattleOfRexes {
             if (!conflictsSREX.contains(c)) {
                 System.out.println(new CollectionToStringWrapper(c));
             }
-        }
+        }*/
     }
 
     public static OWLOntology getCleanedOntology(OWLOntology base) throws OWLOntologyCreationException {
