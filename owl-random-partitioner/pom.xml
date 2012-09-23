@@ -80,6 +80,11 @@
     </repositories>
 
     <distributionManagement>
+        <repository>
+            <name>LSKI release</name>
+            <id>lski</id>
+            <url>https://breda.informatik.uni-mannheim.de/nexus/content/repositories/releases</url>
+        </repository>
         <snapshotRepository>
             <name>LSKI Snapshot Repository</name>
             <id>lski-snapshots</id>

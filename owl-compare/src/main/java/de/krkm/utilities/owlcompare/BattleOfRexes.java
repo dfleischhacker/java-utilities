@@ -2,7 +2,6 @@ package de.krkm.utilities.owlcompare;
 
 import com.clarkparsia.pellet.owlapiv3.PelletReasoner;
 import com.sun.javaws.exceptions.InvalidArgumentException;
-import de.krkm.trex.reasoner.TRexReasoner;
 import de.unima.ki.debug.srex.SREXReasoner;
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.RDFXMLOntologyFormat;
@@ -32,7 +31,7 @@ public class BattleOfRexes {
 
     public void runTiming(String ontologyFileName)
             throws IOException, OWLOntologyStorageException,
-            OWLOntologyCreationException {
+            OWLOntologyCreationException, OWLOntologyCreationException, OWLOntologyCreationException {
         OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
         OWLOntology compareOntology = manager
                 .loadOntologyFromOntologyDocument(new FileInputStream(ontologyFileName));
@@ -45,16 +44,16 @@ public class BattleOfRexes {
         cleanedStream.close();
 
         SREXReasoner srex = new SREXReasoner();
-        srex.loadOntology("/home/daniel/temp/ontologies/uma-random-0.05-arctan.owl_cleaned");
+        //srex.loadOntology("/home/daniel/temp/ontologies/uma-random-0.05-arctan.owl_cleaned");
 
         srex.init();
         srex.materialize();
 
-        Set<Set<OWLAxiom>> conflictsSREX = new HashSet<Set<OWLAxiom>>(srex.getConflictSets());
+        //Set<Set<OWLAxiom>> conflictsSREX = new HashSet<Set<OWLAxiom>>(srex.getConflictSets());
 
 //        Set<OWLObjectProperty> conflictsTREX = new HashSet<Set<OWLAxiom>>();
 
-        TRexReasoner trex = new TRexReasoner(cleanedOntology);
+        //TRexReasoner trex = new TRexReasoner(cleanedOntology);
         /*for (int i = 0; i < trex.getConceptDisjointness().dimensionCol; i++) {
             if (trex.conceptDisjointness.get(i, i)) {
                 conflictsTREX.addAll(trex.getConceptDisjointness().getExplanation(i, i).getDisjunction());

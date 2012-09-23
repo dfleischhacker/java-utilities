@@ -63,6 +63,23 @@ public class ExperimentsRunner {
         runner.runAllExperiments();
     }
 
+    public void compareExplanationsUnsatConcepts(FileOutputStream resStream, OWLOntology ontology) throws IOException {
+        StringBuilder sb = new StringBuilder();
+
+        long startTime = System.nanoTime();
+        sb.append("ExplanationsUnsatConcepts: Started at ").append(startTime).append("\n");
+        TRexReasoner trex = new TRexReasoner(ontology);
+        sb.append("ExplanationsUnsatConcepts: TRex Init done at ").append(System.nanoTime()).append("\n");
+
+        Set<OWLClass> trexIncoherentClasses = trex.getIncoherentClasses();
+        sb.append("ExplanationsUnsatConcepts: Total reasoning time: ").append(toSeconds(System.nanoTime() - startTime)).append("\n");
+        sb.append("ExplanationsUnsatConcepts: Got all incoherent classes at ").append(System.nanoTime()).append("\n");
+        sb.append("ExplanationsUnsatConcepts: Number of incoherent classes is ").append(trexIncoherentClasses.size()).append("\n");
+
+        sb.append("\n");
+        resStream.write(sb.toString().getBytes(Charset.defaultCharset()));
+    }
+
     public void compareUnsatConcepts(FileOutputStream resStream, OWLOntology ontology) throws IOException {
         StringBuilder sb = new StringBuilder();
 

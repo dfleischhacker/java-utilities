@@ -30,7 +30,7 @@ public class OntologyMinimizer {
     private int removedAxioms = 0;
     private int readdedAxioms = 0;
     private int axiomsNotInGenerated = 0;
-    private PriorityQueue<AxiomConfidencePair> pairs;
+    private final PriorityQueue<AxiomConfidencePair> pairs;
 
     /**
      * Extracts the relevant annotations from the given <code>annotatedOntology</code> using the pre-defined set of
@@ -77,11 +77,24 @@ public class OntologyMinimizer {
     /**
      * Starts the minimization process for the given <code>ontology</code> and returns the resulting ontology.
      *
+     * @param ontology       ontology to minimize
+     * @param snapshotPrefix prefix for writing snapshots
+     * @return minimized ontology
+     */
+    public OWLOntology startMinimization(OWLOntology ontology, String snapshotPrefix)
+            throws OWLOntologyCreationException {
+        return startMinimization(ontology, snapshotPrefix, null);
+    }
+
+    /**
+     * Starts the minimization process for the given <code>ontology</code> and returns the resulting ontology.
+     *
      * @param ontology ontology to minimize
      * @return minimized ontology
      */
-    public OWLOntology startMinimization(OWLOntology ontology) throws OWLOntologyCreationException {
-        return startMinimization(ontology, null);
+    public OWLOntology startMinimization(OWLOntology ontology)
+            throws OWLOntologyCreationException {
+        return startMinimization(ontology, "generated", null);
     }
 
     /**
@@ -92,6 +105,19 @@ public class OntologyMinimizer {
      * @return minimized ontology
      */
     public OWLOntology startMinimization(OWLOntology ontology, OutputStream removedAxiomsStream)
+            throws OWLOntologyCreationException {
+        return startMinimization(ontology, "generated", removedAxiomsStream);
+    }
+
+    /**
+     * Starts the minimization process for the given <code>ontology</code> and returns the resulting ontology.
+     *
+     * @param ontology            ontology to minimize
+     * @param removedAxiomsStream stream to write removed axioms to or null to not log such axioms
+     * @param snapshotPrefix      prefix for writing snapshots
+     * @return minimized ontology
+     */
+    public OWLOntology startMinimization(OWLOntology ontology, String snapshotPrefix, OutputStream removedAxiomsStream)
             throws OWLOntologyCreationException {
         BufferedWriter removedAxiomsWriter = null;
         if (removedAxiomsStream != null) {
@@ -108,8 +134,12 @@ public class OntologyMinimizer {
         OWLReasoner reasoner = new Reasoner(config, generatedOntology);
         log.debug("Reasoner initialized");
         int counter = 0;
-        while (!pairs.isEmpty()) {
-            AxiomConfidencePair pair = pairs.remove();
+        PriorityQueue<AxiomConfidencePair> internalPairs;
+        synchronized (pairs) {
+            internalPairs = new PriorityQueue<AxiomConfidencePair>(pairs);
+        }
+        while (!internalPairs.isEmpty()) {
+            AxiomConfidencePair pair = internalPairs.remove();
             log.debug("Progress: {} (Removed {} - Readded {} - Not In {})",
                       new Object[]{counter, removedAxioms, readdedAxioms, axiomsNotInGenerated});
             log.debug("Trying to remove axiom '{}' having confidence of {}", pair.getAxiom(), pair.getConfidence());
@@ -134,7 +164,7 @@ public class OntologyMinimizer {
                         log.debug("Progress: {} (Removed {} - Readded {} - Not In {})",
                                   new Object[]{counter, removedAxioms, readdedAxioms, axiomsNotInGenerated});
                         try {
-                            createSnapShot(generatedOntology);
+                            createSnapShot(generatedOntology, snapshotPrefix);
                         }
                         catch (OntologyMinimizationException e) {
                             log.error("Unable to create snapshot", e);
@@ -166,17 +196,21 @@ public class OntologyMinimizer {
     /**
      * Creates a snapshot of the current generated ontology. If snapShotDir is not set, this is a no-op.
      *
-     * @param ontology ontology to save snapshot of
+     * @param ontology       ontology to save snapshot of
+     * @param snapshotPrefix prefix used for snapshot file
      * @throws OntologyMinimizationException when unable to write snapshot
      */
-    private synchronized void createSnapShot(OWLOntology ontology) throws OntologyMinimizationException {
+    private synchronized void createSnapShot(OWLOntology ontology, String snapshotPrefix)
+            throws OntologyMinimizationException {
         if (snapShotDir == null) {
             log.debug("Not creating snapshot since disabled");
             return;
         }
 
         String snapShotFileName =
-                snapShotDir.getAbsolutePath() + File.separator + "generated_" + snapShotCounter + ".owl";
+                snapShotDir
+                        .getAbsolutePath() + File.separator + snapshotPrefix + "_" + snapShotCounter + "" +
+                        ".owl";
 
         /*
          * sure this is a race condition when other applications interfere with this one, but this solution is
@@ -184,7 +218,8 @@ public class OntologyMinimizer {
          */
         while (new File(snapShotFileName).exists()) {
             snapShotCounter++;
-            snapShotFileName = snapShotDir.getAbsolutePath() + File.separator + "generated_" + snapShotCounter + "" +
+            snapShotFileName = snapShotDir
+                    .getAbsolutePath() + File.separator + snapshotPrefix + "_" + snapShotCounter + "" +
                     ".owl";
         }
 
